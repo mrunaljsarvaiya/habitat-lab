@@ -243,7 +243,8 @@ def batch_obs(
                 # path of sensor being an np.ndarray
                 # np.asarray is ~3x slower than checking
                 if isinstance(sensor, np.ndarray):
-                    batch_t[sensor_name][i] = sensor
+                    # batch_t[sensor_name][i] = sensor
+                    batch_t[sensor_name][i] = torch.tensor(sensor)
                 elif torch.is_tensor(sensor):
                     batch_t[sensor_name][i].copy_(sensor, non_blocking=True)
                 # If the sensor wasn't a tensor, then it's some CPU side data
