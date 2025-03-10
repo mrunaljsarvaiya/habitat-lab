@@ -88,6 +88,11 @@ class PPOTrainer(BaseRLTrainer):
         self._is_distributed = get_distrib_size()[2] > 1
         self._obs_batching_cache = ObservationBatchingCache()
 
+        print(f"\n-----------------------")
+        print(f"Distributged size {get_distrib_size()}")
+        print(f"{self._is_distributed}") 
+        print(f"-----------------------\n")       
+        
         self.using_velocity_ctrl = (
             self.config.TASK_CONFIG.TASK.POSSIBLE_ACTIONS
         ) == ["VELOCITY_CONTROL"]
@@ -125,6 +130,8 @@ class PPOTrainer(BaseRLTrainer):
         Returns:
             None
         """
+        logger.info("Setting up actor critic")
+
         logger.add_filehandler(self.config.LOG_FILE)
 
         policy = baseline_registry.get_policy(self.config.RL.POLICY.name)
@@ -191,6 +198,9 @@ class PPOTrainer(BaseRLTrainer):
         if config is None:
             config = self.config
 
+        # import pdb; pdb.set_trace()
+        # ee = get_env_class(config.ENV_NAME)(config)
+        logger.info("costruct env")
         self.envs = construct_envs(
             config,
             get_env_class(config.ENV_NAME),
@@ -198,6 +208,8 @@ class PPOTrainer(BaseRLTrainer):
         )
 
     def _init_train(self):
+        logger.info("init training")
+
         resume_state = load_resume_state(self.config)
         if resume_state is not None:
             self.config: Config = resume_state["config"]
@@ -708,7 +720,7 @@ class PPOTrainer(BaseRLTrainer):
         Returns:
             None
         """
-
+        logger.info("starting to train")
         self._init_train()
 
         count_checkpoints = 0
@@ -846,7 +858,10 @@ class PPOTrainer(BaseRLTrainer):
                 )
 
                 self._training_log(writer, losses, prev_time)
-
+                print(f"loss: {losses}")
+                logger.info("loss")
+                logger.info(f"Loss: {losses}")
+                
                 # checkpoint model
                 if rank0_only() and self.should_checkpoint():
                     self.save_checkpoint(

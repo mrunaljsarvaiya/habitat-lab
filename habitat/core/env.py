@@ -71,7 +71,11 @@ class Env:
             "Freeze the config before creating the "
             "environment, use config.freeze()."
         )
+        
+        # import pdb; pdb.set_trace()
         self._config = config
+        # self._sim = make_sim(id_sim=self._config.SIMULATOR.TYPE, config=self._config.SIMULATOR)
+        
         self._dataset = dataset
         self._current_episode_index = None
         if self._dataset is None and config.DATASET.TYPE:
@@ -106,9 +110,10 @@ class Env:
         else:
             self.number_of_episodes = None
 
-        self._sim = make_sim(
-            id_sim=self._config.SIMULATOR.TYPE, config=self._config.SIMULATOR
-        )
+        print(f"Making SIM")
+        self._sim = make_sim(id_sim=self._config.SIMULATOR.TYPE, config=self._config.SIMULATOR)
+        print(f"SIM MADE")
+        print("making task")
         self._task = make_task(
             self._config.TASK.TYPE,
             config=self._config.TASK,
@@ -344,6 +349,7 @@ class RLEnv(gym.Env):
         self.number_of_episodes = self._env.number_of_episodes
         self.reward_range = self.get_reward_range()
 
+        # import pdb; pdb.set_trace()
     @property
     def habitat_env(self) -> Env:
         return self._env

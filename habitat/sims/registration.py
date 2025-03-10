@@ -16,6 +16,7 @@ def make_sim(id_sim, **kwargs):
     assert _sim is not None, "Could not find simulator with name {}".format(
         id_sim
     )
+    logger.info("DONE initializing sim {}".format(id_sim))
     return _sim(**kwargs)
 
 
