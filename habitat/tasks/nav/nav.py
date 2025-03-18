@@ -51,6 +51,10 @@ try:
 except ImportError:
     pass
 
+
+from habitat_sim import ShortestPath
+
+
 cv2 = try_cv2_import()
 
 
@@ -970,6 +974,8 @@ class DistanceToGoal(Measure):
     def update_metric(
         self, episode: NavigationEpisode, *args: Any, **kwargs: Any
     ):
+    
+
         current_position = self._sim.get_agent_state().position
 
         if self._previous_position is None or not np.allclose(
@@ -993,6 +999,85 @@ class DistanceToGoal(Measure):
             self._previous_position = current_position
             self._metric = distance_to_target
 
+
+@registry.register_measure
+class PlannerGoal(Measure):
+    """Measure that calculates the shortest path distance to the goal for curriculum learning."""
+
+    cls_uuid: str = "distance_to_goal"
+
+    def __init__(self, sim: Simulator, config: Config, *args: Any, **kwargs: Any):
+        self._previous_position: Optional[Tuple[float, float, float]] = None
+        self._sim = sim
+        self._config = config
+        self._episode_view_points: Optional[List[Tuple[float, float, float]]] = None
+        self._curriculum_factor = 1.0  # Scaling factor for curriculum difficulty
+
+        super().__init__(**kwargs)
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return self.cls_uuid
+
+    def reset_metric(self, episode, *args: Any, **kwargs: Any):
+        """Resets the shortest path distance at the start of an episode."""
+        self._previous_position = None
+        self._metric = None
+
+        if self._config.DISTANCE_TO == "VIEW_POINTS":
+            self._episode_view_points = [
+                view_point.agent_state.position
+                for goal in episode.goals
+                for view_point in goal.view_points
+            ]
+
+        self.update_metric(episode=episode, *args, **kwargs)  # Compute distance
+
+    def update_metric(self, episode: NavigationEpisode, *args: Any, **kwargs: Any):
+        """Updates the metric using the shortest path distance."""
+        current_position = self._sim.get_agent_state().position
+        goal_position = [goal.position for goal in episode.goals][0]  # Assuming single goal
+
+        if self._previous_position is None or not np.allclose(self._previous_position, current_position, atol=1e-4):
+            closest_point = self.compute_next_waypoint(current_position, goal_position)
+
+            if closest_point is not None:
+                shortest_path_distance = self.compute_shortest_path_distance(current_position, closest_point)
+            else:
+                print("❌ WARNING: No valid path found!")
+                shortest_path_distance = np.inf
+
+            # Apply curriculum learning: Gradually increase the difficulty
+            # self._curriculum_factor *= 0.99  # Slowly decrease curriculum assistance
+            adjusted_distance = shortest_path_distance 
+
+            self._previous_position = current_position
+            self._metric = adjusted_distance
+
+    def compute_next_waypoint(self, start_position, goal_position):
+        """Computes the geodesic shortest path distance using Habitat's ShortestPath class."""
+
+        shortest_path = ShortestPath()
+        shortest_path.requested_start = start_position
+        shortest_path.requested_end = goal_position
+
+        if self._sim.pathfinder.find_path(shortest_path):
+            return shortest_path.points[1]
+        else:
+            return None  # No valid path found
+        
+    def compute_shortest_path_distance(self, start_position, goal_position):
+        """Computes the geodesic shortest path distance using Habitat's ShortestPath class."""
+
+
+        shortest_path = ShortestPath()
+        shortest_path.requested_start = start_position
+        shortest_path.requested_end = goal_position
+
+        if self._sim.pathfinder.find_path(shortest_path):
+            return shortest_path.geodesic_distance
+        else:
+            return None  # No valid path found
+        
 
 @registry.register_task_action
 class MoveForwardAction(SimulatorTaskAction):
