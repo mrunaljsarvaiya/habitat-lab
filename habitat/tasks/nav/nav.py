@@ -53,7 +53,7 @@ except ImportError:
 
 
 from habitat_sim import ShortestPath
-
+import math
 
 cv2 = try_cv2_import()
 
@@ -664,6 +664,9 @@ class SoftSPL(SPL):
 
 @registry.register_measure
 class Collisions(Measure):
+
+    cls_uuid: str = "collisions"
+
     def __init__(self, sim, config, *args: Any, **kwargs: Any):
         self._sim = sim
         self._config = config
@@ -937,7 +940,6 @@ class TopDownMap(Measure):
                     self._map_resolution, sim=self._sim
                 ),
             )
-
 
 @registry.register_measure
 class DistanceToGoal(Measure):

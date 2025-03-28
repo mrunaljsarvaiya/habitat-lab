@@ -11,6 +11,8 @@ from collections import OrderedDict
 from typing import Any, Dict, Iterable, List, Optional, Union
 
 import numpy as np
+import copy
+import math
 
 from habitat.config import Config
 from habitat.core.dataset import Dataset, Episode
@@ -255,6 +257,9 @@ class EmbodiedTask:
         )
         self._action_keys = list(self.actions.keys())
 
+        self.last_action = None
+        self.last_observation = None
+
     def _init_entities(
         self, entity_names, register_func, entities_config=None
     ) -> OrderedDict:
@@ -287,6 +292,9 @@ class EmbodiedTask:
         for action_instance in self.actions.values():
             action_instance.reset(episode=episode, task=self)
 
+        self.last_observation = None
+        self.last_action = None
+
         return observations
 
     def step(self, action: Dict[str, Any], episode: Episode):
@@ -299,8 +307,25 @@ class EmbodiedTask:
             action_name in self.actions
         ), f"Can't find '{action_name}' action in {self.actions.keys()}."
 
+        ##################################
+        # print("\n------------------")
+        # self.last_observation = copy.deepcopy(self._sim._prev_sim_obs) 
+        # print("last observation:", self.last_observation)
+        # agent_state = self._sim.get_agent_state()
+        # quaternion = agent_state.rotation
+        # yaw = math.atan2(2 * (quaternion.x * quaternion.y + quaternion.w * quaternion.z), 
+        #                  quaternion.w**2 + quaternion.x**2 - quaternion.y**2 - quaternion.z**2)
+        
+        # self.last_heading = np.rad2deg(yaw)
+        # print("\n------------------")
+
+        # self.last_action = action["action"]
+        ##################################
+
+
         task_action = self.actions[action_name]
         observations = task_action.step(**action["action_args"], task=self)
+        
         observations.update(
             self.sensor_suite.get_observations(
                 observations=observations,
@@ -313,6 +338,7 @@ class EmbodiedTask:
         self._is_episode_active = self._check_episode_is_active(
             observations=observations, action=action, episode=episode
         )
+        
 
         return observations
 
